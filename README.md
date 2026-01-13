@@ -16,7 +16,7 @@ Seamlessly integrates with NOAA [CoastalWatch](https://coastwatch.noaa.gov/cwn/p
  * SWOT
 
 
- ### Satellite Altimetry Data Support
+ ### T and S Profile Data Support
 
 It also integrates the Euro Argo dataset [ifremmer](https://fleetmonitoring.euro-argo.eu/dashboard?Status=Active&Country=France) for 3D temperature and salinity collocation.
 

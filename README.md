@@ -44,7 +44,7 @@ It also integrates the Euro Argo dataset [ifremmer](https://fleetmonitoring.euro
 
     If you want to install the latest dev version, using this instead:
     ```bash
-    pip install "git+[https://github.com/noaa-ocs-modeling/OCSTrack.git](https://github.com/noaa-ocs-modeling/OCSTrack.git)"
+    pip install "https://github.com/noaa-ocs-modeling/OCSTrack.git"
     ```
 
 ## Usage

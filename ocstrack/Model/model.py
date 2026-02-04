@@ -115,6 +115,8 @@ class SCHISM:
         self._validate_model_dict()
         self._files = self._select_model_files()
 
+        self._time = None
+
         self._mesh_path = os.path.join(self.rundir, 'hgrid.gr3')
         self._mesh_x, self._mesh_y, self._mesh_depth = _parse_gr3_mesh(self._mesh_path)
 
@@ -316,6 +318,42 @@ class SCHISM:
         """ return file list """
         return self._files
 
+    @property
+    def time(self) -> np.ndarray:
+        """
+        Return the concatenated time array for all selected files.
+        Cached after the first call to avoid re-reading files.
+        """
+        if self._time is not None:
+            return self._time
+        if not self.files:
+            return np.array([])
+
+        all_times = []
+        # print("Generating global time array from files...") # Optional debug print
+        for fpath in self.files:
+            try:
+                # Open strictly to read the time variable
+                with xr.open_dataset(fpath) as ds:
+                    # Ensure we get datetime64 objects
+                    if 'time' in ds:
+                        t = ds['time'].values
+                        # If simple float/int, try to decode. If already datetime, use as is.
+                        # (SCHISM usually needs decoding if the file wasn't saved with CF conventions)
+                        if not np.issubdtype(t.dtype, np.datetime64):
+                             t = xr.decode_cf(ds[['time']])['time'].values
+                        all_times.append(t)
+            except Exception as e:
+                print(f"Warning: Could not read time from {fpath}: {e}")
+
+        if all_times:
+            self._time = np.concatenate(all_times)
+            # Ensure it is sorted, just in case files were out of order
+            self._time.sort()
+        else:
+            self._time = np.array([])
+
+        return self._time
 
 class ADCSWAN:
     """

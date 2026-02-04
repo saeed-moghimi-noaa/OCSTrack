@@ -115,29 +115,52 @@ class Collocate:
         # Time buffer logic based on collocation type
         if time_buffer is None:
             _logger.info("Inferring time_buffer...")
-            if not self.model.files:
-                raise ValueError("Cannot infer time_buffer: Model has no files.")
 
-            # This logic now works for ALL types
-            example_file = self.model.files[0]
+            # STRATEGY 1: Use the full time array if it exists (e.g. from your model.py fix)
+            if hasattr(self.model, 'time') and len(self.model.time) >= 2:
+                 # Calculate mean timestep from the first few steps to be safe
+                 # (Taking a small sample avoids overhead if array is huge)
+                 sample_times = self.model.time[:100] 
+                 timestep = np.diff(sample_times).mean()
+                 self.time_buffer = timestep / 2
+                 _logger.info(f"Inferred time_buffer from model.time: {self.time_buffer}")
 
-            if self.collocation_type in ['2D', '3D_Surface']:
-                times = self.model.load_variable(example_file)["time"].values
-
-            elif self.collocation_type == '3D_Profile':
-                _logger.info("Loading one 3D file pair for time buffer inference...")
-                # Load just one file pair to get time info
-                with self.model.load_3d_file_pair(example_file) as m_data:
-                    times = m_data.time.values
+            # STRATEGY 2: Scan files until we find one with valid data
             else:
-                raise ValueError(f"Unknown var_type: {self.collocation_type}")
+                if not self.model.files:
+                    raise ValueError("Cannot infer time_buffer: Model has no files.")
 
-            if len(times) < 2:
-                raise ValueError("Cannot infer time_buffer: less than two model timesteps.")
+                found_valid_dt = False
 
-            timestep = np.diff(times).mean()
-            self.time_buffer = timestep / 2
-            _logger.info(f"Inferred time_buffer as half mean timestep: {self.time_buffer}")
+                # Loop through files until we find one with >= 2 time steps
+                for i, example_file in enumerate(self.model.files):
+                    try:
+                        # Load times based on type
+                        if self.collocation_type in ['2D', '3D_Surface']:
+                            times = self.model.load_variable(example_file)["time"].values
+                        elif self.collocation_type == '3D_Profile':
+                            # Use context manager to ensure clean close
+                            with self.model.load_3d_file_pair(example_file) as m_data:
+                                times = m_data.time.values
+                        else:
+                            raise ValueError(f"Unknown var_type: {self.collocation_type}")
+
+                        # Check if this file has enough data
+                        if len(times) >= 2:
+                            timestep = np.diff(times).mean()
+                            self.time_buffer = timestep / 2
+                            _logger.info(f"Inferred time_buffer from file #{i} ({example_file}): {self.time_buffer}")
+                            found_valid_dt = True
+                            break # Stop looping, we found it!
+                        else:
+                            _logger.debug(f"File {example_file} has insufficient time steps ({len(times)}). Checking next...")
+    
+                    except Exception as e:
+                        _logger.warning(f"Error reading {example_file} for time buffer: {e}")
+                        continue
+
+                if not found_valid_dt:
+                     raise ValueError("Cannot infer time_buffer: Scanned all files but none contained >= 2 time steps.")
 
         else:
             self.time_buffer = time_buffer

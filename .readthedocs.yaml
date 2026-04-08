@@ -22,10 +22,6 @@ sphinx:
 python:
   install:
     - requirements: docs/requirements.txt
-    - method: pip
-      path: .
-      extra_requirements:
-        - dev
 
 # Optional but recommended, lets you preview PRs
 formats:

@@ -1,0 +1,11 @@
+# Documentation build requirements
+sphinx>=4.0
+sphinx-rtd-theme
+sphinx-autodoc-typehints
+sphinxcontrib-napoleon
+nbsphinx
+myst-parser
+
+# Optional: for building without installing full package
+# Uncomment if you want to build docs without package dependencies
+# sphinx-autodoc-typehints
